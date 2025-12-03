@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tic Tac Toe — Static (with AI + Startup options)</title>
+  <title>Tic Tac Toe — Fixed (with AI + Startup options)</title>
   <style>
     :root{
       --bg:#0f1724; --muted:#94a3b8; --glass: rgba(255,255,255,0.03);
-      --accent:#08a0e9; --card:#071027;
+      --accent:#08a0e9; --card:#071027; --panel:#0b1220;
       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     }
     html,body{height:100%;margin:0;background:
@@ -48,7 +48,19 @@
     .modal h2{margin:0 0 6px 0}
     .form-row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
     label.inline{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
-    select, input[type="radio"], input[type="button"]{margin-left:6px}
+    /* make selects look like normal form controls (fixed the bold/white issue) */
+    select, input[type="button"], input[type="radio"]{
+      margin-left:6px;
+      background: rgba(255,255,255,0.02);
+      color: #e6eef6;
+      border: 1px solid rgba(255,255,255,0.06);
+      padding:6px 8px;
+      border-radius:8px;
+      font-size:13px;
+      font-weight:500; /* normal weight (not too bold) */
+      outline: none;
+    }
+    select:focus, input[type="button"]:focus{ box-shadow: 0 6px 18px rgba(8,160,233,0.06); }
     .muted-small{font-size:12px;color:var(--muted)}
     .center{display:flex;justify-content:center;gap:8px;margin-top:12px}
     input[type="button"].start{padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#08a0e9,#10b981);border:none;color:#041022;font-weight:800;cursor:pointer}
@@ -56,6 +68,8 @@
     .hint{font-size:12px;color:var(--muted);margin-top:6px}
     /* focus */
     .cell:focus{box-shadow:0 0 0 3px rgba(8,160,233,.12), 0 6px 18px rgba(2,6,23,.6);outline:none}
+    /* hide modal by default (we'll show via JS) */
+    #modal{ display:none; }
   </style>
 </head>
 <body>
@@ -148,17 +162,6 @@
   </div>
 
 <script>
-/*
-  Tic Tac Toe single-file with startup modal for settings:
-  - Mode: Human vs Human / Human vs AI
-  - If Human vs AI: AI difficulty (easy/hard)
-  - Human chooses mark (X or O)
-  - Starter: X or O (who moves first)
-  Behavior:
-    - Human mark determines which side human plays.
-    - Starter determines the initial current player; if the starter is AI and mode is H vs A, AI moves immediately.
-*/
-
 (function(){
   const BOARD = document.getElementById('board');
   const STATUS = document.getElementById('statusText');
@@ -183,21 +186,19 @@
   let cells = Array(9).fill(null);
   let current = 'X';
   let running = false;
-  let humanPlays = { X: true, O: true }; // will be set by modal
+  let humanPlays = { X: true, O: true };
   let aiLevel = 'hard';
-  let mode = 'hvh'; // 'hvh' or 'hva'
+  let mode = 'hvh';
   const LINES = [
     [0,1,2],[3,4,5],[6,7,8],
     [0,3,6],[1,4,7],[2,5,8],
     [0,4,8],[2,4,6]
   ];
 
-  // Scores using localStorage
   function loadScores(){ const s = JSON.parse(localStorage.getItem('ttt-scores') || '{}'); return { X: s.X || 0, O: s.O || 0, D: s.D || 0 }; }
   function saveScores(scores){ localStorage.setItem('ttt-scores', JSON.stringify(scores)); renderScores(scores); }
   function renderScores(scores){ SCORE_X.textContent = scores.X; SCORE_O.textContent = scores.O; SCORE_D.textContent = scores.D; }
 
-  // Build board
   function buildBoard(){
     BOARD.innerHTML = '';
     for(let i=0;i<9;i++){
@@ -211,15 +212,11 @@
       btn.addEventListener('keydown', onCellKeydown);
       BOARD.appendChild(btn);
     }
-    // focus first
     const first = BOARD.querySelector('.cell');
     if(first) first.focus();
   }
 
-  function onCellClick(e){
-    const idx = Number(e.currentTarget.dataset.index);
-    playAt(idx);
-  }
+  function onCellClick(e){ const idx = Number(e.currentTarget.dataset.index); playAt(idx); }
 
   function onCellKeydown(e){
     const idx = Number(e.currentTarget.dataset.index);
@@ -230,34 +227,28 @@
     else if(key === 'ArrowDown') next = (idx + 3) % 9;
     else if(key === 'ArrowUp') next = (idx + 6) % 9;
     else if(key === 'Enter' || key === ' '){ e.preventDefault(); playAt(idx); return; } else return;
-
     e.preventDefault();
-    const nextCell = BOARD.querySelector(\`.cell[data-index="\${next}"]\`);
+    const nextCell = BOARD.querySelector(`.cell[data-index="${next}"]`);
     if(nextCell) nextCell.focus();
   }
 
   function playAt(index){
     if(!running) return;
     if(cells[index]) return;
-    if(!humanPlays[current]) return; // prevent clicking when it's AI's turn
-
+    if(!humanPlays[current]) return;
     placeMark(index, current);
-
     const result = checkWin();
     if(result.winner){ handleWin(result.winner, result.line); return; }
     if(result.draw){ handleDraw(); return; }
-
     current = current === 'X' ? 'O' : 'X';
     STATUS.textContent = current + "'s turn";
-
-    if(!humanPlays[current] && running){
-      setTimeout(() => aiMove(), 250);
-    }
+    if(!humanPlays[current] && running){ setTimeout(() => aiMove(), 250); }
   }
 
   function placeMark(index, mark){
     cells[index] = mark;
-    const el = BOARD.querySelector(\`.cell[data-index="\${index}"]\`);
+    const el = BOARD.querySelector(`.cell[data-index="${index}"]`);
+    if(!el) return;
     el.classList.add(mark.toLowerCase());
     el.textContent = mark;
     el.setAttribute('aria-disabled','true');
@@ -266,9 +257,7 @@
   function checkWin(){
     for(const line of LINES){
       const [a,b,c] = line;
-      if(cells[a] && cells[a] === cells[b] && cells[a] === cells[c]){
-        return { winner: cells[a], line };
-      }
+      if(cells[a] && cells[a] === cells[b] && cells[a] === cells[c]){ return { winner: cells[a], line }; }
     }
     if(cells.every(Boolean)) return { draw: true };
     return {};
@@ -279,7 +268,7 @@
     STATUS.textContent = winner + ' wins!';
     BOARD.classList.add('win');
     for(const cellEl of BOARD.querySelectorAll('.cell')) cellEl.setAttribute('aria-disabled','true');
-    for(const idx of line){ const el = BOARD.querySelector(\`.cell[data-index="\${idx}"]\`); el.classList.add('win-cell'); }
+    for(const idx of line){ const el = BOARD.querySelector(`.cell[data-index="${idx}"]`); if(el) el.classList.add('win-cell'); }
     const scores = loadScores(); scores[winner] = (scores[winner] || 0) + 1; saveScores(scores);
   }
 
@@ -291,34 +280,23 @@
   }
 
   function restartGame(keepSettings){
-    // if keepSettings false, open settings modal
-    if(!keepSettings){
-      openModal();
-      return;
-    }
+    if(!keepSettings){ openModal(); return; }
     cells = Array(9).fill(null);
     BOARD.classList.remove('win');
     buildBoard();
     running = true;
-    current = MODAL_STARTER.value; // use values from last chosen settings stored in modal selects
+    current = MODAL_STARTER.value || 'X';
     STATUS.textContent = current + "'s turn";
-    // if AI starts and playing mode is H vs A, trigger AI
-    if(mode === 'hva' && !humanPlays[current]){
-      setTimeout(() => aiMove(), 350);
-    }
+    if(mode === 'hva' && !humanPlays[current]){ setTimeout(() => aiMove(), 350); }
   }
 
-  // AI dispatcher
   function aiMove(){
     if(!running) return;
     const empties = cells.map((v,i)=> v ? null : i).filter(v=>v!==null);
     if(empties.length === 0) return;
     let idx;
-    if(aiLevel === 'easy'){
-      idx = empties[Math.floor(Math.random() * empties.length)];
-    } else {
-      idx = bestMove(cells.slice(), current);
-    }
+    if(aiLevel === 'easy') idx = empties[Math.floor(Math.random() * empties.length)];
+    else idx = bestMove(cells.slice(), current);
     placeMark(idx, current);
     const result = checkWin();
     if(result.winner){ handleWin(result.winner, result.line); return; }
@@ -327,10 +305,9 @@
     STATUS.textContent = current + "'s turn";
   }
 
-  // Minimax for optimal play
   function bestMove(boardState, playerMark){
     const opponent = playerMark === 'X' ? 'O' : 'X';
-    if(boardState.every(v => !v)) return 4; // center
+    if(boardState.every(v => !v)) return 4;
     function winnerFor(b){
       for(const line of LINES){
         const [a,b1,c] = line;
@@ -370,14 +347,12 @@
   // Modal / settings handling
   function openModal(){
     MODAL.style.display = 'flex';
-    // reflect current values into modal selects
     MODAL_MODE.value = mode;
     MODAL_AILEVEL.value = aiLevel;
-    MODAL_HUMAN_MARK.value = humanPlays.X && !humanPlays.O ? 'X' : (!humanPlays.X && humanPlays.O ? 'O' : MODAL_HUMAN_MARK.value);
-    // starter select retains previous
-    // show/hide AI difficulty depending on mode
+    // set human mark in modal (best-effort)
+    if(humanPlays.X && !humanPlays.O) MODAL_HUMAN_MARK.value = 'X';
+    else if(!humanPlays.X && humanPlays.O) MODAL_HUMAN_MARK.value = 'O';
     DIFF_WRAP.style.display = (MODAL_MODE.value === 'hva') ? 'inline-flex' : 'none';
-    // focus
     START_BTN.focus();
   }
 
@@ -385,74 +360,65 @@
     MODAL.style.display = 'none';
   }
 
-  // Apply modal choices and start the game
   START_BTN.addEventListener('click', () => {
     mode = MODAL_MODE.value;
     aiLevel = MODAL_AILEVEL.value;
-    const humanMark = MODAL_HUMAN_MARK.value; // 'X' or 'O'
-    const starterMark = MODAL_STARTER.value; // 'X' or 'O'
-
-    if(mode === 'hvh'){
-      humanPlays = { X: true, O: true };
-    } else {
-      humanPlays = { X: humanMark === 'X', O: humanMark === 'O' };
-    }
-
-    // store current starter in modalStarter select (used by restart)
+    const humanMark = MODAL_HUMAN_MARK.value;
+    const starterMark = MODAL_STARTER.value;
+    if(mode === 'hvh') humanPlays = { X: true, O: true };
+    else humanPlays = { X: humanMark === 'X', O: humanMark === 'O' };
     MODAL_STARTER.value = starterMark;
-
-    // save modal values so restart keeps them
-    // init game
     closeModal();
-    // prepare and start
+    // init game
     cells = Array(9).fill(null);
     BOARD.classList.remove('win');
     buildBoard();
     running = true;
     current = starterMark;
     STATUS.textContent = current + "'s turn";
-    // if AI should move first
-    if(mode === 'hva' && !humanPlays[current]){
-      setTimeout(() => aiMove(), 350);
-    }
+    if(mode === 'hva' && !humanPlays[current]) setTimeout(() => aiMove(), 300);
   });
 
-  // Cancel opens but returns to modal closed and waiting (we'll simply close modal but do not start)
   CANCEL_BTN.addEventListener('click', () => {
-    // If there is an existing game running, just close settings, otherwise keep modal open to enforce selection
+    // Close modal. If there is no running game yet, start a default playable game
     closeModal();
-    // If there is no game yet, reopen modal so user must choose. But to be friendly, we reopen only if we never started.
     if(!running){
-      // reopen after tiny delay so user can cancel intentionally
-      setTimeout(() => openModal(), 120);
+      // apply sensible defaults and start
+      mode = MODAL_MODE.value || 'hva';
+      aiLevel = MODAL_AILEVEL.value || 'hard';
+      const humanMark = MODAL_HUMAN_MARK.value || 'X';
+      humanPlays = (mode === 'hvh') ? { X:true, O:true } : { X: humanMark === 'X', O: humanMark === 'O' };
+      const starterMark = MODAL_STARTER.value || 'X';
+      cells = Array(9).fill(null);
+      BOARD.classList.remove('win');
+      buildBoard();
+      running = true;
+      current = starterMark;
+      STATUS.textContent = current + "'s turn";
+      if(mode === 'hva' && !humanPlays[current]) setTimeout(() => aiMove(), 300);
     }
   });
 
-  // Toggle AI difficulty visibility
   MODAL_MODE.addEventListener('change', () => { DIFF_WRAP.style.display = (MODAL_MODE.value === 'hva') ? 'inline-flex' : 'none'; });
 
-  // Buttons
   RESTART.addEventListener('click', () => restartGame(true));
   RESET_SCORE.addEventListener('click', () => { const zero = { X:0, O:0, D:0 }; saveScores(zero); });
   OPEN_SETTINGS.addEventListener('click', () => openModal());
 
-  // Init UI
   (function init(){
     buildBoard();
     renderScores(loadScores());
-    // set defaults in modal
     MODAL_MODE.value = 'hva';
     MODAL_AILEVEL.value = 'hard';
     MODAL_HUMAN_MARK.value = 'X';
     MODAL_STARTER.value = 'X';
     DIFF_WRAP.style.display = 'inline-flex';
-    // show modal to force user pick settings
+    // show modal to let the user choose; if they dismiss, Cancel will start a default game
     openModal();
-    // keyboard 'r' restarts
     window.addEventListener('keydown', (e) => { if(e.key === 'r' || e.key === 'R'){ restartGame(true); } });
   })();
 
 })();
 </script>
 </body>
-</html>
+          </html>
