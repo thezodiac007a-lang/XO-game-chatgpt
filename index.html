@@ -3,37 +3,39 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tic Tac Toe — Fixed (with AI + Startup options)</title>
+  <title>Tic Tac Toe</title>
   <style>
     :root{
-      --bg:#0f1724; --muted:#94a3b8; --glass: rgba(255,255,255,0.03);
-      --accent:#08a0e9; --card:#071027; --panel:#0b1220;
+      --bg:#071226;
+      --muted:#93a3b6;
+      --glass: rgba(255,255,255,0.02);
+      --accent:#08a0e9;
       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     }
     html,body{height:100%;margin:0;background:
-      radial-gradient(1200px 600px at 10% 10%, rgba(8,160,233,0.04), transparent 8%),
+      radial-gradient(1000px 400px at 10% 8%, rgba(8,160,233,0.04), transparent 8%),
       linear-gradient(180deg,#071025 0%, #031026 100%), var(--bg);
       color:#e6eef6; -webkit-font-smoothing:antialiased;}
 
-    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:28px;box-sizing:border-box}
-    .card{width:100%;max-width:920px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));border-radius:14px;padding:20px;box-shadow:0 8px 30px rgba(2,6,23,0.6);display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
+    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+    .card{width:100%;max-width:920px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.03));border-radius:12px;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,0.6);display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
     @media (max-width:920px){.card{grid-template-columns:1fr}}
 
     header{grid-column:1 / -1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
     h1{font-size:20px;margin:0}
-    .sub{color:var(--muted);font-size:13px}
+    .top-right{color:var(--muted);font-size:13px}
 
-    .board-wrap{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));padding:18px;border-radius:10px;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center}
+    .board-wrap{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));padding:14px;border-radius:10px;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center}
     .board{width:320px;max-width:calc(100vw - 120px);aspect-ratio:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:10px;padding:10px;box-sizing:border-box;border-radius:10px}
     .cell{background:var(--glass);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:56px;font-weight:700;user-select:none;cursor:pointer;transition:transform .12s,box-shadow .12s;position:relative;color:#e6eef6;outline:none}
     .cell:active{transform:scale(.98)}
     .cell[aria-disabled="true"]{cursor:not-allowed;opacity:.9}
-    .cell.x{color:#eab308}.cell.o{color:#60a5fa}
+    .cell.x{color:#f6c84a}.cell.o{color:#6ea7ff}
 
     .controls{display:flex;gap:10px;align-items:center;justify-content:center;width:100%}
-    button{background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600;letter-spacing:.2px;transition:all .14s}
-    .btn-primary{background:linear-gradient(90deg, rgba(8,160,233,0.12), rgba(16,185,129,0.06));border:1px solid rgba(255,255,255,0.06);box-shadow:0 6px 18px rgba(8,160,233,0.06)}
-    .side{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));padding:16px;border-radius:10px;display:flex;flex-direction:column;gap:12px;min-height:200px}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.05);color:inherit;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600;letter-spacing:.2px;transition:all .12s}
+    .btn-primary{background:linear-gradient(90deg, rgba(8,160,233,0.12), rgba(16,185,129,0.04));box-shadow:0 6px 18px rgba(8,160,233,0.05)}
+    .side{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));padding:14px;border-radius:10px;display:flex;flex-direction:column;gap:12px;min-height:200px}
     .status{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
     .muted{color:var(--muted);font-weight:500;font-size:13px}
     .score{display:flex;gap:8px;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;font-weight:700}
@@ -48,16 +50,15 @@
     .modal h2{margin:0 0 6px 0}
     .form-row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
     label.inline{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
-    /* make selects look like normal form controls (fixed the bold/white issue) */
     select, input[type="button"], input[type="radio"]{
       margin-left:6px;
       background: rgba(255,255,255,0.02);
       color: #e6eef6;
-      border: 1px solid rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.05);
       padding:6px 8px;
       border-radius:8px;
       font-size:13px;
-      font-weight:500; /* normal weight (not too bold) */
+      font-weight:500;
       outline: none;
     }
     select:focus, input[type="button"]:focus{ box-shadow: 0 6px 18px rgba(8,160,233,0.06); }
@@ -66,14 +67,12 @@
     input[type="button"].start{padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#08a0e9,#10b981);border:none;color:#041022;font-weight:800;cursor:pointer}
     input[type="button"].start:hover{transform:translateY(-3px)}
     .hint{font-size:12px;color:var(--muted);margin-top:6px}
-    /* focus */
     .cell:focus{box-shadow:0 0 0 3px rgba(8,160,233,.12), 0 6px 18px rgba(2,6,23,.6);outline:none}
-    /* hide modal by default (we'll show via JS) */
     #modal{ display:none; }
   </style>
 </head>
 <body>
-  <!-- Modal: shown on load -->
+  <!-- Modal: initial settings -->
   <div id="modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Game setup">
     <div class="modal" role="document">
       <h2>Start new game</h2>
@@ -89,8 +88,8 @@
 
         <label class="inline" id="diffWrap">AI Difficulty:
           <select id="modalAiLevel" aria-label="AI difficulty">
-            <option value="easy">Easy (random)</option>
-            <option value="hard">Hard (optimal)</option>
+            <option value="easy">Easy</option>
+            <option value="hard">Hard</option>
           </select>
         </label>
       </div>
@@ -103,15 +102,13 @@
           </select>
         </label>
 
-        <label class="inline">Starter (mark):
+        <label class="inline">Starter:
           <select id="modalStarter" aria-label="Starter mark">
             <option value="X">X</option>
             <option value="O">O</option>
           </select>
         </label>
       </div>
-
-      <div class="hint">Tip: If you want the AI to start first, set "You play as" to the other mark and choose the starter to be the AI's mark.</div>
 
       <div class="center">
         <input type="button" class="start" id="startBtn" value="Start Game">
@@ -124,10 +121,9 @@
     <div class="card" role="application" aria-label="Tic tac toe game">
       <header>
         <div>
-          <h1>Tic Tac Toe (with AI)</h1>
-          <div class="sub">Single-file — drop into GitHub Pages. Keyboard: arrows + Enter, 'r' to restart.</div>
+          <h1>Tic Tac Toe</h1>
         </div>
-        <div class="sub">Choose settings when the app opens.</div>
+        <div class="top-right" aria-hidden="true"></div>
       </header>
 
       <section class="board-wrap" aria-labelledby="boardTitle">
@@ -150,13 +146,13 @@
             <div style="text-align:center;color:var(--muted);font-size:13px">Draws<br><span id="scoreD" style="font-size:18px">0</span></div>
             <div><div class="who">O</div><div id="scoreO" style="font-size:20px">0</div></div>
           </div>
-          <div class="muted">How to play: take turns placing X and O. First to line up 3 wins.</div>
+          <div class="muted">Take turns placing X and O. First to line up 3 wins.</div>
         </div>
       </aside>
 
       <footer>
-        <div class="small">No external libs • Accessible • Mobile friendly</div>
-        <div class="small">Save as <code>index.html</code> and push to GitHub</div>
+        <div class="small"></div>
+        <div class="small"></div>
       </footer>
     </div>
   </div>
@@ -172,7 +168,6 @@
   const SCORE_O = document.getElementById('scoreO');
   const SCORE_D = document.getElementById('scoreD');
 
-  // Modal elements
   const MODAL = document.getElementById('modal');
   const MODAL_MODE = document.getElementById('modalMode');
   const MODAL_AILEVEL = document.getElementById('modalAiLevel');
@@ -182,7 +177,6 @@
   const CANCEL_BTN = document.getElementById('cancelBtn');
   const DIFF_WRAP = document.getElementById('diffWrap');
 
-  // Game variables
   let cells = Array(9).fill(null);
   let current = 'X';
   let running = false;
@@ -242,7 +236,7 @@
     if(result.draw){ handleDraw(); return; }
     current = current === 'X' ? 'O' : 'X';
     STATUS.textContent = current + "'s turn";
-    if(!humanPlays[current] && running){ setTimeout(() => aiMove(), 250); }
+    if(!humanPlays[current] && running){ setTimeout(() => aiMove(), 220); }
   }
 
   function placeMark(index, mark){
@@ -344,21 +338,17 @@
     return best.index;
   }
 
-  // Modal / settings handling
   function openModal(){
     MODAL.style.display = 'flex';
     MODAL_MODE.value = mode;
     MODAL_AILEVEL.value = aiLevel;
-    // set human mark in modal (best-effort)
     if(humanPlays.X && !humanPlays.O) MODAL_HUMAN_MARK.value = 'X';
     else if(!humanPlays.X && humanPlays.O) MODAL_HUMAN_MARK.value = 'O';
     DIFF_WRAP.style.display = (MODAL_MODE.value === 'hva') ? 'inline-flex' : 'none';
     START_BTN.focus();
   }
 
-  function closeModal(){
-    MODAL.style.display = 'none';
-  }
+  function closeModal(){ MODAL.style.display = 'none'; }
 
   START_BTN.addEventListener('click', () => {
     mode = MODAL_MODE.value;
@@ -369,7 +359,6 @@
     else humanPlays = { X: humanMark === 'X', O: humanMark === 'O' };
     MODAL_STARTER.value = starterMark;
     closeModal();
-    // init game
     cells = Array(9).fill(null);
     BOARD.classList.remove('win');
     buildBoard();
@@ -380,10 +369,8 @@
   });
 
   CANCEL_BTN.addEventListener('click', () => {
-    // Close modal. If there is no running game yet, start a default playable game
     closeModal();
     if(!running){
-      // apply sensible defaults and start
       mode = MODAL_MODE.value || 'hva';
       aiLevel = MODAL_AILEVEL.value || 'hard';
       const humanMark = MODAL_HUMAN_MARK.value || 'X';
@@ -413,7 +400,6 @@
     MODAL_HUMAN_MARK.value = 'X';
     MODAL_STARTER.value = 'X';
     DIFF_WRAP.style.display = 'inline-flex';
-    // show modal to let the user choose; if they dismiss, Cancel will start a default game
     openModal();
     window.addEventListener('keydown', (e) => { if(e.key === 'r' || e.key === 'R'){ restartGame(true); } });
   })();
@@ -421,4 +407,4 @@
 })();
 </script>
 </body>
-          </html>
+        </html>
