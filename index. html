@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tic Tac Toe — Static (with AI)</title>
+  <style>
+    :root{
+      --bg:#0f1724;
+      --panel:#0b1220;
+      --accent:#08a0e9;
+      --win:#10b981;
+      --lose:#ef4444;
+      --muted:#94a3b8;
+      --cell:#0b1220;
+      --glass: rgba(255,255,255,0.03);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{
+      height:100%;
+      margin:0;
+      background:
+        radial-gradient(1200px 600px at 10% 10%, rgba(8,160,233,0.06), transparent 8%),
+        linear-gradient(180deg, #071025 0%, #031026 100%), var(--bg);
+      color:#e6eef6;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{
+      min-height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px;
+      box-sizing:border-box;
+    }
+    .card{
+      width:100%;
+      max-width:920px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));
+      border-radius:14px;
+      padding:20px;
+      box-shadow:0 8px 30px rgba(2,6,23,0.6);
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap:18px;
+      align-items:start;
+    }
+    @media (max-width:920px){ .card{ grid-template-columns: 1fr; } }
+    header{ grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:6px; }
+    h1{ font-size:20px; margin:0; letter-spacing:0.2px; }
+    .sub{ color:var(--muted); font-size:13px }
+    .board-wrap{
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+      padding:18px;
+      border-radius:10px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      align-items:center;
+      justify-content:center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+    .board{
+      width:320px;
+      max-width:calc(100vw - 120px);
+      aspect-ratio:1;
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      grid-template-rows:repeat(3,1fr);
+      gap:10px;
+      padding:10px;
+      box-sizing:border-box;
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+      border-radius:10px;
+    }
+    .cell{
+      background:var(--glass);
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:56px;
+      font-weight:700;
+      user-select:none;
+      cursor:pointer;
+      transition:transform .12s ease, box-shadow .12s ease;
+      position:relative;
+      color:#e6eef6;
+      outline: none;
+      border: none;
+    }
+    .cell:active{ transform:scale(.98) }
+    .cell[aria-disabled="true"]{ cursor:not-allowed; opacity:.9 }
+    .cell.x{ color:#eab308; }
+    .cell.o{ color:#60a5fa; }
+    .controls{ display:flex; gap:10px; align-items:center; justify-content:center; width:100%; }
+    button{
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.06);
+      color:inherit;
+      padding:8px 12px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:600;
+      letter-spacing:0.2px;
+      transition:all .14s ease;
+    }
+    button:hover{ transform:translateY(-3px) }
+    .btn-primary{
+      background:linear-gradient(90deg, rgba(8,160,233,0.12), rgba(16,185,129,0.06));
+      border:1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 6px 18px rgba(8,160,233,0.06);
+    }
+    .side{
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));
+      padding:16px;
+      border-radius:10px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:200px;
+    }
+    .status{ font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px; }
+    .muted{ color:var(--muted); font-weight:500; font-size:13px }
+    .score{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      justify-content:space-between;
+      background:rgba(255,255,255,0.02);
+      padding:10px;
+      border-radius:8px;
+      font-weight:700;
+    }
+    .score .who{ font-size:13px; color:var(--muted); font-weight:600 }
+    .line{ position:absolute; height:6px; background:linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); border-radius:999px; transform-origin:center; pointer-events:none; opacity:0; transition:opacity .16s ease; }
+    .win .cell{ opacity:.25; transform:scale(.98); }
+    .win .cell.win-cell{ opacity:1; transform:scale(1.03); box-shadow: 0 12px 30px rgba(16,185,129,0.08); }
+    footer{ grid-column:1 / -1; font-size:12px; color:var(--muted); display:flex; justify-content:space-between; gap:8px; align-items:center; margin-top:6px; }
+    .small{ font-size:12px; color:var(--muted) }
+    .cell:focus{ box-shadow:0 0 0 3px rgba(8,160,233,.12), 0 6px 18px rgba(2,6,23,.6); outline:none; }
+    .controls-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    label.select-inline { font-size:13px; color:var(--muted); display:flex; gap:8px; align-items:center; }
+    select, input[type="radio"]{ margin-left:6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" role="application" aria-label="Tic tac toe game">
+      <header>
+        <div>
+          <h1>Tic Tac Toe (with AI)</h1>
+          <div class="sub">Play Human vs Human or Human vs AI — static single-page (works on GitHub Pages)</div>
+        </div>
+        <div class="sub">Click a cell or use keyboard (arrow keys + Enter). Press 'r' to restart.</div>
+      </header>
+
+      <section class="board-wrap" aria-labelledby="boardTitle">
+        <div id="boardTitle" class="muted" style="width:100%; text-align:left">Game board</div>
+        <div class="board" id="board" role="grid" aria-label="tic tac toe grid"></div>
+
+        <div class="controls" aria-hidden="false">
+          <button id="restart" class="btn-primary" title="Restart game">Restart</button>
+          <button id="resetScore" title="Reset scoreboard">Reset Scores</button>
+        </div>
+      </section>
+
+      <aside class="side" aria-labelledby="panelTitle">
+        <div id="panelTitle" class="status">Status: <span id="statusText" style="margin-left:6px">X's turn</span></div>
+
+        <div class="controls-row" aria-hidden="false" style="margin-top:6px">
+          <label class="select-inline">Mode:
+            <select id="modeSelect" aria-label="Game mode">
+              <option value="hvh">Human vs Human</option>
+              <option value="hva">Human vs AI</option>
+            </select>
+          </label>
+
+          <label class="select-inline">AI difficulty:
+            <select id="aiLevel" aria-label="AI difficulty">
+              <option value="easy">Easy (random)</option>
+              <option value="hard">Hard (optimal)</option>
+            </select>
+          </label>
+
+          <label class="select-inline">Starter:
+            <select id="starter" aria-label="Who starts">
+              <option value="X">X starts</option>
+              <option value="O">O starts</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="score" aria-live="polite">
+          <div>
+            <div class="who">X</div>
+            <div id="scoreX" style="font-size:20px">0</div>
+          </div>
+          <div style="text-align:center; color:var(--muted); font-size:13px">Draws<br><span id="scoreD" style="font-size:18px">0</span></div>
+          <div>
+            <div class="who">O</div>
+            <div id="scoreO" style="font-size:20px">0</div>
+          </div>
+        </div>
+
+        <div class="muted">
+          How to play: take turns placing X and O. First to line up 3 wins.
+          When Human vs AI is selected, the human plays whichever mark is the "Starter".
+        </div>
+      </aside>
+
+      <footer>
+        <div class="small">No external libs • Accessible • Mobile friendly</div>
+        <div class="small">Save as <code>index.html</code> and push to GitHub</div>
+      </footer>
+    </div>
+  </div>
+
+<script>
+/* Clean, defensive Tic-Tac-Toe script with AI (minimax) and debug helpers.
+   Wrapped in DOMContentLoaded to avoid timing issues when deployed. */
+document.addEventListener('DOMContentLoaded', () => {
+  const BOARD = document.getElementById('board');
+  const STATUS = document.getElementById('statusText');
+  const RESTART = document.getElementById('restart');
+  const RESET_SCORE = document.getElementById('resetScore');
+  const SCORE_X = document.getElementById('scoreX');
+  const SCORE_O = document.getElementById('scoreO');
+  const SCORE_D = document.getElementById('scoreD');
+  const MODE_SELECT = document.getElementById('modeSelect');
+  const AI_LEVEL = document.getElementById('aiLevel');
+  const STARTER = document.getElementById('starter');
+
+  if(!BOARD){
+    console.error('[TTT] board element not found — cannot initialize game.');
+    return;
+  }
+
+  // Game state
+  let cells = Array(9).fill(null);
+  let current = 'X';
+  let running = true;
+  let humanPlays = { X: true, O: true };
+  let aiLevel = 'hard';
+
+  const LINES = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  function loadScores(){
+    try {
+      const s = JSON.parse(localStorage.getItem('ttt-scores') || '{}');
+      return { X: s.X || 0, O: s.O || 0, D: s.D || 0 };
+    } catch(e){
+      console.warn('[TTT] loadScores parse failed', e);
+      return {X:0,O:0,D:0};
+    }
+  }
+  function saveScores(scores){
+    localStorage.setItem('ttt-scores', JSON.stringify(scores));
+    renderScores(scores);
+  }
+  function renderScores(scores){
+    SCORE_X.textContent = scores.X;
+    SCORE_O.textContent = scores.O;
+    SCORE_D.textContent = scores.D;
+  }
+
+  // Build board cells and attach listeners
+  function buildBoard(){
+    BOARD.innerHTML = '';
+    for(let i=0;i<9;i++){
+      const btn = document.createElement('button');
+      btn.className = 'cell';
+      btn.setAttribute('role','gridcell');
+      btn.setAttribute('aria-label',`cell ${i+1}`);
+      btn.dataset.index = i;
+      btn.tabIndex = 0;
+      btn.addEventListener('click', onCellClick);
+      btn.addEventListener('keydown', onCellKeydown);
+      BOARD.appendChild(btn);
+    }
+    const first = BOARD.querySelector('.cell');
+    if(first) first.focus();
+  }
+
+  function onCellClick(e){
+    const idx = Number(e.currentTarget.dataset.index);
+    playAt(idx);
+  }
+
+  function onCellKeydown(e){
+    const idx = Number(e.currentTarget.dataset.index);
+    const key = e.key;
+    let next;
+    if(key === 'ArrowRight') next = (idx % 3 === 2) ? idx - 2 : idx + 1;
+    else if(key === 'ArrowLeft') next = (idx % 3 === 0) ? idx + 2 : idx - 1;
+    else if(key === 'ArrowDown') next = (idx + 3) % 9;
+    else if(key === 'ArrowUp') next = (idx + 6) % 9;
+    else if(key === 'Enter' || key === ' '){
+      e.preventDefault();
+      playAt(idx);
+      return;
+    } else return;
+
+    e.preventDefault();
+    const nextCell = BOARD.querySelector(`.cell[data-index="${next}"]`);
+    if(nextCell) nextCell.focus();
+  }
+
+  function playAt(index){
+    if(!running) return;
+    if(cells[index]) return;
+    if(!humanPlays[current]) return;
+
+    placeMark(index, current);
+
+    const result = checkWin();
+    if(result.winner){
+      handleWin(result.winner, result.line);
+      return;
+    }
+    if(result.draw){
+      handleDraw();
+      return;
+    }
+
+    current = current === 'X' ? 'O' : 'X';
+    STATUS.textContent = current + "'s turn";
+
+    if(!humanPlays[current] && running){
+      setTimeout(() => aiMove(), 220);
+    }
+  }
+
+  function placeMark(index, mark){
+    cells[index] = mark;
+    const el = BOARD.querySelector(`.cell[data-index="${index}"]`);
+    if(el){
+      el.classList.add(mark.toLowerCase());
+      el.textContent = mark;
+      el.setAttribute('aria-disabled','true');
+    }
+  }
+
+  function checkWin(){
+    for(const line of LINES){
+      const [a,b,c] = line;
+      if(cells[a] && cells[a] === cells[b] && cells[a] === cells[c]){
+        return { winner: cells[a], line };
+      }
+    }
+    if(cells.every(Boolean)){
+      return { draw: true };
+    }
+    return {};
+  }
+
+  function handleWin(winner, line){
+    running = false;
+    STATUS.textContent = winner + ' wins!';
+    BOARD.classList.add('win');
+    for(const cellEl of BOARD.querySelectorAll('.cell')) cellEl.setAttribute('aria-disabled','true');
+    for(const idx of line){
+      const el = BOARD.querySelector(`.cell[data-index="${idx}"]`);
+      if(el) el.classList.add('win-cell');
+    }
+    const scores = loadScores();
+    scores[winner] = (scores[winner] || 0) + 1;
+    saveScores(scores);
+    console.log('[TTT] winner', winner, 'line', line);
+  }
+
+  function handleDraw(){
+    running = false;
+    STATUS.textContent = 'Draw!';
+    const scores = loadScores();
+    scores.D = (scores.D || 0) + 1;
+    saveScores(scores);
+    for(const cellEl of BOARD.querySelectorAll('.cell')) cellEl.setAttribute('aria-disabled','true');
+    console.log('[TTT] draw');
+  }
+
+  function restartGame(fromSettings){
+    cells = Array(9).fill(null);
+    BOARD.classList.remove('win');
+    buildBoard();
+    running = true;
+    current = STARTER.value === 'X' ? 'X' : 'O';
+    STATUS.textContent = current + "'s turn";
+
+    // Mode mapping: if Human vs AI, human is the Starter selected (so predictable)
+    if(MODE_SELECT.value === 'hvh'){
+      humanPlays = { X: true, O: true };
+    } else {
+      const humanMark = STARTER.value; // human plays the Starter
+      humanPlays = { X: humanMark === 'X', O: humanMark === 'O' };
+    }
+
+    if(!humanPlays[current]){
+      setTimeout(() => aiMove(), 350);
+    }
+
+    console.log('[TTT] restarted — current:', current, 'humanPlays:', humanPlays);
+  }
+
+  function aiMove(){
+    if(!running) return;
+    const empties = cells.map((v,i)=> v ? null : i).filter(v=>v!==null);
+    if(empties.length === 0) return;
+
+    let idx;
+    if(aiLevel === 'easy'){
+      idx = empties[Math.floor(Math.random() * empties.length)];
+    } else {
+      idx = bestMove(cells.slice(), current);
+    }
+    placeMark(idx, current);
+
+    const result = checkWin();
+    if(result.winner){
+      handleWin(result.winner, result.line);
+      return;
+    }
+    if(result.draw){
+      handleDraw();
+      return;
+    }
+
+    current = current === 'X' ? 'O' : 'X';
+    STATUS.textContent = current + "'s turn";
+    console.log('[TTT] ai moved to', idx, 'next current', current);
+  }
+
+  // Minimax
+  function bestMove(boardState, playerMark){
+    const opponent = playerMark === 'X' ? 'O' : 'X';
+
+    if(boardState.every(v => !v)){
+      return 4; // center if empty
+    }
+
+    function winnerFor(bd){
+      for(const line of LINES){
+        const [a,b,c] = line;
+        if(bd[a] && bd[a] === bd[b] && bd[a] === bd[c]) return bd[a];
+      }
+      if(bd.every(Boolean)) return 'draw';
+      return null;
+    }
+
+    function minimax(bd, turn){
+      const w = winnerFor(bd);
+      if(w === playerMark) return { score: 10 };
+      if(w === opponent) return { score: -10 };
+      if(w === 'draw') return { score: 0 };
+
+      const moves = [];
+      for(let i=0;i<9;i++){
+        if(!bd[i]){
+          bd[i] = turn;
+          const result = minimax(bd, turn === 'X' ? 'O' : 'X');
+          moves.push({ index: i, score: result.score });
+          bd[i] = null;
+        }
+      }
+
+      if(turn === playerMark){
+        let best = moves[0];
+        for(const m of moves) if(m.score > best.score) best = m;
+        return best;
+      } else {
+        let best = moves[0];
+        for(const m of moves) if(m.score < best.score) best = m;
+        return best;
+      }
+    }
+
+    const best = minimax(boardState, playerMark);
+    return best.index;
+  }
+
+  // UI bindings
+  RESTART.addEventListener('click', () => restartGame(true));
+  RESET_SCORE.addEventListener('click', () => {
+    const zero = { X:0, O:0, D:0 };
+    saveScores(zero);
+  });
+
+  MODE_SELECT.addEventListener('change', () => { restartGame(true); });
+  AI_LEVEL.addEventListener('change', () => { aiLevel = AI_LEVEL.value; });
+  STARTER.addEventListener('change', () => { restartGame(true); });
+
+  // init
+  (function init(){
+    buildBoard();
+    renderScores(loadScores());
+    aiLevel = AI_LEVEL.value;
+    current = STARTER.value === 'X' ? 'X' : 'O';
+    restartGame(true);
+
+    // keyboard quick restart
+    window.addEventListener('keydown', (e) => {
+      if(e.key === 'r' || e.key === 'R') restartGame(true);
+    });
+
+    // expose simple helpers for console testing
+    window.__ttt_playAt = function(i){ try { playAt(i); return 'played '+i; } catch(e){ return 'err:'+e.message; } };
+    window.__ttt_state = function(){ return { cells: cells.slice(), current, running, humanPlays }; };
+
+    console.log('[TTT] init complete — ready to play');
+  })();
+
+});
+</script>
+</body>
+</html>
